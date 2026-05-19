@@ -38,16 +38,12 @@ def format_reminder_message(upcoming: list) -> str:
     for entry in upcoming:
         name = entry["name"]
         days = entry["days_until"]
-        age = entry["turning_age"]
 
         if days == 0:
-            lines.append(f"🎉 *{name}* turns *{age}* TODAY!")
+            lines.append(f"🎉 *{name}*'s birthday is TODAY!")
         elif days == 1:
-            lines.append(f"⏰ *{name}* turns *{age}* TOMORROW!")
+            lines.append(f"⏰ *{name}*'s birthday is TOMORROW!")
         else:
-            lines.append(f"📅 *{name}* turns *{age}* in *{days} days*")
-
-        if entry.get("notes"):
-            lines.append(f"   _{entry['notes']}_")
+            lines.append(f"📅 *{name}*'s birthday is in *{days} days*")
 
     return "\n".join(lines)

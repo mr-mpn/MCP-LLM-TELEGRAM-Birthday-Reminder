@@ -1,5 +1,5 @@
 from pymongo import MongoClient
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import Optional
 
 
@@ -22,44 +22,58 @@ def get_collection(mongodb_uri: str):
     return db["birthdays"]
 
 
-def add_birthday(mongodb_uri: str, name: str, birthday: str, notes: str = "") -> dict:
+def add_birthday(mongodb_uri: str, name: str, month: int, day: int) -> dict:
     """
     Add a birthday to the database.
 
     Args:
         mongodb_uri: MongoDB connection string
         name: Person's name
-        birthday: Birthday in YYYY-MM-DD format
-        notes: Optional notes about the person
+        month: Birthday month (1-12)
+        day: Birthday day (1-31)
     """
     collection = get_collection(mongodb_uri)
 
-    # Parse the birthday date
-    bday = datetime.strptime(birthday, "%Y-%m-%d")
-
     doc = {
         "name": name,
-        "birthday": bday,
-        "month": bday.month,
-        "day": bday.day,
-        "notes": notes,
+        "month": month,
+        "day": day,
         "created_at": datetime.utcnow(),
     }
 
     result = collection.insert_one(doc)
-    return {"id": str(result.inserted_id), "name": name, "birthday": birthday}
+    return {"id": str(result.inserted_id), "name": name, "month": month, "day": day}
+
+
+def update_birthday(mongodb_uri: str, name: str, month: int, day: int) -> bool:
+    """
+    Update an existing birthday in the database.
+
+    Args:
+        mongodb_uri: MongoDB connection string
+        name: Person's name
+        month: New birthday month (1-12)
+        day: New birthday day (1-31)
+    """
+    collection = get_collection(mongodb_uri)
+    result = collection.update_one(
+        {"name": {"$regex": f"^{name}$", "$options": "i"}},
+        {"$set": {"month": month, "day": day}},
+    )
+    return result.modified_count > 0
 
 
 def list_birthdays(mongodb_uri: str) -> list:
     """List all birthdays."""
     collection = get_collection(mongodb_uri)
     birthdays = []
-    for doc in collection.find({}, {"_id": 0, "name": 1, "birthday": 1, "notes": 1}):
+    for doc in collection.find({}, {"_id": 0, "name": 1, "month": 1, "day": 1, "created_at": 1}):
         birthdays.append(
             {
                 "name": doc["name"],
-                "birthday": doc["birthday"].strftime("%Y-%m-%d"),
-                "notes": doc.get("notes", ""),
+                "month": doc["month"],
+                "day": doc["day"],
+                "created_at": doc.get("created_at", "").isoformat() if doc.get("created_at") else "",
             }
         )
     return birthdays
@@ -70,13 +84,14 @@ def get_birthday(mongodb_uri: str, name: str) -> Optional[dict]:
     collection = get_collection(mongodb_uri)
     doc = collection.find_one(
         {"name": {"$regex": f"^{name}$", "$options": "i"}},
-        {"_id": 0, "name": 1, "birthday": 1, "notes": 1},
+        {"_id": 0, "name": 1, "month": 1, "day": 1, "created_at": 1},
     )
     if doc:
         return {
             "name": doc["name"],
-            "birthday": doc["birthday"].strftime("%Y-%m-%d"),
-            "notes": doc.get("notes", ""),
+            "month": doc["month"],
+            "day": doc["day"],
+            "created_at": doc.get("created_at", "").isoformat() if doc.get("created_at") else "",
         }
     return None
 
@@ -94,31 +109,20 @@ def get_upcoming_birthdays(mongodb_uri: str, days_ahead: int = 3) -> list:
     today = date.today()
     upcoming = []
 
-    # Check each day in the range
     for offset in range(days_ahead + 1):
-        check_date = date(
-            today.year,
-            today.month,
-            today.day,
-        )
-        # Calculate the target date
-        from datetime import timedelta
-
         target = today + timedelta(days=offset)
 
         docs = collection.find(
             {"month": target.month, "day": target.day},
-            {"_id": 0, "name": 1, "birthday": 1, "notes": 1},
+            {"_id": 0, "name": 1, "month": 1, "day": 1},
         )
         for doc in docs:
-            age = target.year - doc["birthday"].year
             upcoming.append(
                 {
                     "name": doc["name"],
-                    "birthday": doc["birthday"].strftime("%Y-%m-%d"),
+                    "month": doc["month"],
+                    "day": doc["day"],
                     "days_until": offset,
-                    "turning_age": age,
-                    "notes": doc.get("notes", ""),
                 }
             )
 
