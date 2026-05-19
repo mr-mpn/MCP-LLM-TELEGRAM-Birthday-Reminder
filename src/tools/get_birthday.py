@@ -1,5 +1,5 @@
 import json
-from src.db.mongo import get_birthday
+from db.mongo import get_birthday
 
 
 GET_BIRTHDAY_SCHEMA = {

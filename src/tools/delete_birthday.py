@@ -1,5 +1,5 @@
 import json
-from src.db.mongo import delete_birthday
+from db.mongo import delete_birthday
 
 
 DELETE_BIRTHDAY_SCHEMA = {

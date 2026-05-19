@@ -1,8 +1,8 @@
 import json
-from src.shared.config import load_config
-from src.chat.auth import is_authorized
-from src.chat.telegram import parse_update, send_message
-from src.chat.llm import chat_with_tools
+from shared.config import load_config
+from chat.auth import is_authorized
+from chat.telegram import parse_update, send_message
+from chat.llm import chat_with_tools
 
 
 def lambda_handler(event, context):

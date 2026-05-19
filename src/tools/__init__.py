@@ -1,7 +1,7 @@
-from src.tools.add_birthday import tool_add_birthday, ADD_BIRTHDAY_SCHEMA
-from src.tools.list_birthdays import tool_list_birthdays, LIST_BIRTHDAYS_SCHEMA
-from src.tools.get_birthday import tool_get_birthday, GET_BIRTHDAY_SCHEMA
-from src.tools.delete_birthday import tool_delete_birthday, DELETE_BIRTHDAY_SCHEMA
+from tools.add_birthday import tool_add_birthday, ADD_BIRTHDAY_SCHEMA
+from tools.list_birthdays import tool_list_birthdays, LIST_BIRTHDAYS_SCHEMA
+from tools.get_birthday import tool_get_birthday, GET_BIRTHDAY_SCHEMA
+from tools.delete_birthday import tool_delete_birthday, DELETE_BIRTHDAY_SCHEMA
 
 # All available tools for OpenAI function calling
 TOOLS = [

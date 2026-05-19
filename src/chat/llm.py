@@ -1,6 +1,6 @@
 import json
 from openai import OpenAI
-from src.tools import TOOLS, TOOL_HANDLERS
+from tools import TOOLS, TOOL_HANDLERS
 
 
 SYSTEM_PROMPT = """

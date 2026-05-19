@@ -1,6 +1,6 @@
-from src.shared.config import load_config
-from src.db.mongo import get_upcoming_birthdays
-from src.chat.telegram import send_message
+from shared.config import load_config
+from db.mongo import get_upcoming_birthdays
+from chat.telegram import send_message
 
 
 def lambda_handler(event, context):
