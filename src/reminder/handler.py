@@ -16,6 +16,9 @@ def lambda_handler(event, context):
     upcoming = get_upcoming_birthdays(config["mongodb_uri"], days_ahead)
 
     if not upcoming:
+        message = f"☀️ Daily reminder: No birthdays coming up in the next {days_ahead} days!"
+        for user_id in config["allowed_telegram_ids"]:
+            send_message(config["telegram_bot_token"], user_id, message)
         return {"statusCode": 200, "body": "No upcoming birthdays."}
 
     # Build the reminder message
