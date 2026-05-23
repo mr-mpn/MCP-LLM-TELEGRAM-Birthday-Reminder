@@ -1,0 +1,70 @@
+name: Deploy Birthday Bot
+
+on:
+  push:
+    branches: [main]
+
+env:
+  AWS_REGION: eu-central-1
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies for layer
+        run: |
+          mkdir -p dist/layer/python
+          pip install -r requirements.txt -t dist/layer/python --quiet
+
+      - name: Package layer zip
+        run: |
+          cd dist/layer
+          zip -r ../dependencies_layer.zip python/ -q
+          cd ../..
+          rm -rf dist/layer
+
+      - name: Package Lambda code zip
+        run: |
+          cd src
+          zip -r ../dist/chat_lambda.zip . -q
+          cd ..
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init -input=false
+
+      - name: Terraform Apply
+        working-directory: terraform
+        run: |
+          terraform apply -auto-approve -input=false \
+            -replace="aws_lambda_layer_version.dependencies"
+        env:
+          TF_VAR_telegram_bot_token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TF_VAR_openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+          TF_VAR_mongodb_uri: ${{ secrets.MONGODB_URI }}
+          TF_VAR_allowed_telegram_ids: ${{ secrets.ALLOWED_TELEGRAM_IDS }}
+          TF_VAR_aws_region: eu-central-1
+          TF_VAR_reminder_days_ahead: "3"
+          TF_VAR_reminder_schedule: "cron(0 8 * * ? *)"
