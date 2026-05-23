@@ -7,11 +7,11 @@ SYSTEM_PROMPT = """You are a birthday reminder assistant. You help the user mana
 
 You can:
 - Add new birthdays
-- List all stored birthdays
+- List all stored birthdays in Miladi (Gregorian)
 - Look up a specific person's birthday
 - Update a birthday
 - Delete a birthday
-- Convert Shamsi (Jalali/Persian) dates to Miladi (Gregorian)
+- Convert Shamsi (Jalali/Persian) dates to Miladi (Gregorian) using tools
 
 IMPORTANT RULES:
 - Act immediately. Do NOT ask for confirmation. Just do what the user asks.
@@ -32,6 +32,7 @@ def chat_with_tools(openai_api_key: str, mongodb_uri: str, user_message: str) ->
     """
     Send a user message to OpenAI with tool definitions,
     handle any tool calls, and return the final response.
+    Supports multiple rounds of tool calls (e.g., convert then add).
     """
     client = OpenAI(api_key=openai_api_key)
 
@@ -40,45 +41,41 @@ def chat_with_tools(openai_api_key: str, mongodb_uri: str, user_message: str) ->
         {"role": "user", "content": user_message},
     ]
 
-    # First call — may include tool calls
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=messages,
-        tools=TOOLS,
-    )
-
-    assistant_message = response.choices[0].message
-
-    # If no tool calls, return the response directly
-    if not assistant_message.tool_calls:
-        return assistant_message.content
-
-    # Process tool calls
-    messages.append(assistant_message)
-
-    for tool_call in assistant_message.tool_calls:
-        function_name = tool_call.function.name
-        arguments = json.loads(tool_call.function.arguments)
-
-        # Execute the tool
-        handler = TOOL_HANDLERS.get(function_name)
-        if handler:
-            result = handler(mongodb_uri, arguments)
-        else:
-            result = json.dumps({"error": f"Unknown tool: {function_name}"})
-
-        messages.append(
-            {
-                "role": "tool",
-                "tool_call_id": tool_call.id,
-                "content": result,
-            }
+    # Loop until the LLM gives a final text response (max 5 rounds to prevent infinite loops)
+    for _ in range(5):
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
+            tools=TOOLS,
         )
 
-    # Second call — LLM generates a natural language response from tool results
-    final_response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=messages,
-    )
+        assistant_message = response.choices[0].message
 
-    return final_response.choices[0].message.content
+        # If no tool calls, we're done — return the text response
+        if not assistant_message.tool_calls:
+            return assistant_message.content
+
+        # Process tool calls
+        messages.append(assistant_message)
+
+        for tool_call in assistant_message.tool_calls:
+            function_name = tool_call.function.name
+            arguments = json.loads(tool_call.function.arguments)
+
+            # Execute the tool
+            handler = TOOL_HANDLERS.get(function_name)
+            if handler:
+                result = handler(mongodb_uri, arguments)
+            else:
+                result = json.dumps({"error": f"Unknown tool: {function_name}"})
+
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": result,
+                }
+            )
+
+    # Fallback if we hit the loop limit
+    return assistant_message.content or "Done!"
