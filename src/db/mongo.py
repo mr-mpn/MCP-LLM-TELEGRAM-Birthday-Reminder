@@ -64,10 +64,12 @@ def update_birthday(mongodb_uri: str, name: str, month: int, day: int) -> bool:
 
 
 def list_birthdays(mongodb_uri: str) -> list:
-    """List all birthdays."""
+    """List all birthdays, sorted by month then day."""
     collection = get_collection(mongodb_uri)
     birthdays = []
-    for doc in collection.find({}, {"_id": 0, "name": 1, "month": 1, "day": 1, "created_at": 1}):
+    for doc in collection.find(
+        {}, {"_id": 0, "name": 1, "month": 1, "day": 1, "created_at": 1}
+    ).sort([("month", 1), ("day", 1)]):
         birthdays.append(
             {
                 "name": doc["name"],

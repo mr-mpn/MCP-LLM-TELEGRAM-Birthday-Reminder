@@ -4,12 +4,59 @@ A Telegram bot powered by OpenAI that helps you manage and get reminded about up
 
 ## Architecture
 
-- **Telegram Bot** — Chat interface for managing birthdays + receiving reminders
-- **AWS Lambda (Chat)** — Handles Telegram webhook, calls OpenAI with tool definitions
-- **AWS Lambda (Reminder)** — Daily cron that checks upcoming birthdays and sends alerts
-- **OpenAI API** — LLM for natural language understanding and tool calling
-- **MongoDB** — Stores people and their birthdays
-- **Terraform** — Infrastructure as code for all AWS resources
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                          TELEGRAM                                    │
+│                                                                     │
+│   ┌──────────┐         ┌──────────────┐                            │
+│   │   User   │◄───────►│ Telegram Bot │                            │
+│   └──────────┘         └──────┬───────┘                            │
+│                               │                                     │
+└───────────────────────────────┼─────────────────────────────────────┘
+                                │ Webhook (HTTPS)
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                            AWS                                       │
+│                                                                     │
+│   ┌───────────────┐    ┌──────────────────┐    ┌────────────────┐  │
+│   │ API Gateway   │───►│ Lambda (Chat)    │───►│ OpenAI API     │  │
+│   │ POST /webhook │    │                  │◄───│ (gpt-4o-mini)  │  │
+│   └───────────────┘    │  ┌────────────┐  │    └────────────────┘  │
+│                         │  │ Tools:     │  │                        │
+│                         │  │ • add      │  │    ┌────────────────┐  │
+│                         │  │ • list     │  │───►│ MongoDB Atlas  │  │
+│                         │  │ • get      │  │◄───│ (birthdays)    │  │
+│                         │  │ • update   │  │    └────────────────┘  │
+│                         │  │ • delete   │  │                        │
+│                         │  │ • convert  │  │                        │
+│                         │  └────────────┘  │                        │
+│                         └──────────────────┘                        │
+│                                                                     │
+│   ┌───────────────┐    ┌──────────────────┐                        │
+│   │ EventBridge   │───►│ Lambda (Reminder)│──► Telegram Bot API    │
+│   │ (daily cron)  │    │                  │───► MongoDB Atlas       │
+│   └───────────────┘    └──────────────────┘                        │
+│                                                                     │
+│   Infrastructure managed by Terraform                               │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Flow: Chat
+
+1. User sends a message in Telegram (e.g. "Add Ali, 1 Ordibehesht")
+2. Telegram forwards it to API Gateway via webhook
+3. Chat Lambda receives the message, validates the user ID
+4. Message is sent to OpenAI with tool definitions
+5. OpenAI decides which tools to call (e.g. convert Shamsi → Miladi, then add)
+6. Lambda executes the tools against MongoDB
+7. OpenAI generates a human-friendly response
+8. Lambda sends the response back via Telegram Bot API
+
+### Flow: Daily Reminder
+
+1. EventBridge triggers the Reminder Lambda every day at 8:00 AM UTC
+2. Lambda queries MongoDB for birthdays in the next N days
+3. Formats a reminder message and sends it to the user via Telegram
 
 ## Project Structure
 
