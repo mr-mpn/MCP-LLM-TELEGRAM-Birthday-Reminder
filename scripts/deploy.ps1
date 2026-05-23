@@ -35,6 +35,7 @@ Write-Host "[4/4] Deploying with Terraform..." -ForegroundColor Yellow
 Push-Location $TerraformDir
 
 terraform init -input=false -no-color 2>&1 | Out-Null
+terraform taint aws_lambda_layer_version.dependencies 2>&1 | Out-Null
 terraform apply -auto-approve -input=false
 
 Pop-Location

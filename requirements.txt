@@ -1,3 +1,4 @@
 openai>=1.0.0
 pymongo>=4.17.0
 requests>=2.31.0
+persiantools>=4.0.0
