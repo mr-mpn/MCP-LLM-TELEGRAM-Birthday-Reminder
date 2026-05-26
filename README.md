@@ -58,28 +58,29 @@ A Telegram bot powered by OpenAI that helps you manage and get reminded about up
 2. Lambda queries MongoDB for birthdays in the next N days
 3. Formats a reminder message and sends it to the user via Telegram
 
-## Project Structure
-
-```
-├── terraform/          # AWS infrastructure (Lambda, API Gateway, EventBridge, etc.)
-├── src/
-│   ├── chat/           # Telegram webhook Lambda (message handling, LLM, auth)
-│   ├── reminder/       # Daily reminder Lambda
-│   ├── tools/          # MCP tools (add, list, get, delete birthdays)
-│   ├── db/             # MongoDB connection and queries
-│   └── shared/         # Shared config and utilities
-├── tests/              # Unit tests
-└── requirements.txt    # Python dependencies
-```
-
 ## Setup
 
-1. Create a Telegram bot via @BotFather
-2. Get your OpenAI API key
-3. Set up a MongoDB instance (Atlas free tier works)
-4. Configure Terraform variables
-5. Deploy with `terraform apply`
-6. Set the Telegram webhook to your API Gateway URL
+1. Create a Telegram bot via [@BotFather](https://t.me/BotFather) and save the token
+2. Get your Telegram user ID from [@userinfobot](https://t.me/userinfobot)
+3. Get an [OpenAI API key](https://platform.openai.com/api-keys)
+4. Set up a MongoDB instance ([Atlas free tier](https://www.mongodb.com/atlas) works)
+5. Create an S3 bucket for Terraform state:
+   ```bash
+   aws s3api create-bucket --bucket your-bucket-name --region eu-central-1 \
+     --create-bucket-configuration LocationConstraint=eu-central-1
+   ```
+6. Add the following secrets to your GitHub repository (Settings → Secrets → Actions):
+   - `AWS_ACCESS_KEY_ID`
+   - `AWS_SECRET_ACCESS_KEY`
+   - `TELEGRAM_BOT_TOKEN`
+   - `OPENAI_API_KEY`
+   - `MONGODB_URI`
+   - `ALLOWED_TELEGRAM_IDS`
+7. Push to `master` — GitHub Actions will build and deploy automatically
+8. Set the Telegram webhook (printed in the Terraform output):
+   ```bash
+   curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook?url=<API_GATEWAY_URL>"
+   ```
 
 ## Environment Variables
 
